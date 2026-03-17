@@ -13,11 +13,9 @@ RSS_FEEDS = {
     "Zenn トレンド": "https://zenn.dev/feed",
     "Hacker News": "https://hnrss.org/frontpage?count=20",
     "dev.to": "https://dev.to/feed",
-    "Anthropic Blog": "https://www.anthropic.com/rss.xml",
     "OpenAI Blog": "https://openai.com/blog/rss.xml",
     "Google AI Blog": "https://blog.research.google/feeds/posts/default",
     "ITmedia": "https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml",
-    "TechCrunch Japan": "https://jp.techcrunch.com/feed/",
     "日経XTECH": "https://xtech.nikkei.com/rss/index.rdf",
 }
 
