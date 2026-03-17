@@ -12,48 +12,9 @@
 
 ---
 
-## セットアップ手順
+## 動作確認（手動実行）
 
-### 1. このリポジトリをGitHubにpush
-
-```bash
-git init
-git add .
-git commit -m "initial commit"
-git remote add origin https://github.com/YOUR_NAME/REPO_NAME.git
-git push -u origin main
-```
-
-### 2. GitHub Pages を有効化
-
-リポジトリの `Settings` → `Pages` →  
-**Source: GitHub Actions** を選択して Save
-
-（旧来の「Deploy from a branch」ではなく「GitHub Actions」を選ぶのがポイント）
-
-### 3. Slack Incoming Webhook URLを取得
-
-1. https://api.slack.com/apps にアクセス
-2. 「Create New App」→「From scratch」
-3. アプリ名を入力してワークスペースを選択
-4. 左メニュー「Incoming Webhooks」を有効化
-5. 「Add New Webhook to Workspace」でチャンネルを選択
-6. 発行された Webhook URL をコピー
-
-### 4. GitHub Secrets に登録
-
-GitHubリポジトリの `Settings` → `Secrets and variables` → `Actions` で以下を登録：
-
-| Secret名 | 値 |
-|----------|----|
-| `ANTHROPIC_API_KEY` | Anthropic APIキー（https://console.anthropic.com）|
-| `SLACK_WEBHOOK_URL` | 手順3で取得したWebhook URL |
-
-### 5. 動作確認（手動実行）
-
-GitHubリポジトリの `Actions` タブ →「Morning News Digest」→「Run workflow」
-
----
+Actionsの手動実行
 
 ## ローカルでのテスト実行
 
@@ -70,8 +31,6 @@ python main.py --dry-run
 # ブラウザで確認
 open index.html
 ```
-
----
 
 ## カスタマイズ
 
