@@ -7,8 +7,8 @@
 | カテゴリ | ソース |
 |----------|--------|
 | 技術 | Zenn トレンド, GitHub Trending, Hacker News, dev.to |
-| AI・LLM | Anthropic Blog, OpenAI Blog, Google AI Blog |
-| 国内IT・ビジネス | ITmedia, TechCrunch Japan, 日経XTECH |
+| AI・LLM | OpenAI Blog, Google AI Blog |
+| 国内IT・ビジネス | ITmedia, 日経XTECH |
 
 ---
 
@@ -23,7 +23,7 @@ Actionsの手動実行
 pip install -r requirements.txt
 
 # 環境変数をセット
-export ANTHROPIC_API_KEY="sk-ant-..."
+export ANTHROPIC_API_KEY="..."
 
 # dry-run: Slack未送信・index.html をローカル出力
 python main.py --dry-run
