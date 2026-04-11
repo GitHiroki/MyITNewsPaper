@@ -12,3 +12,6 @@ __pycache__/
 
 # 生成ファイル
 index.html
+
+# Claude Code
+CLAUDE.md

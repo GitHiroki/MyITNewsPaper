@@ -1,12 +1,12 @@
 # 🌅 Morning News Digest
 
-毎朝7時にニュースを自動収集・AI要約して **GitHub Pages に HTML公開 → SlackにURLを通知** するツール。
+毎朝7時にニュースを自動収集・AI要約して、GitHub PagesにHTML公開 → SlackにURLを通知するツール。
 
 ## 購読ソース
 
 | カテゴリ | ソース |
 |----------|--------|
-| 技術 | Zenn トレンド, GitHub Trending, Hacker News, dev.to |
+| 技術 | Zenn トレンド, GitHub Trending, Hacker News, dev.to, gihyo.jp |
 | AI・LLM | OpenAI Blog, Google AI Blog |
 | 国内IT・ビジネス | ITmedia, 日経XTECH |
 

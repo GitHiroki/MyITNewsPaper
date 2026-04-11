@@ -27,7 +27,7 @@ SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
 [{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
 
 GROUPS = {
-    "🛠 技術": ["Zenn トレンド", "GitHub Trending", "Hacker News", "dev.to"],
+    "🛠 技術": ["Zenn トレンド", "GitHub Trending", "Hacker News", "dev.to", "gihyo.jp"],
     "🤖 AI・LLM": ["OpenAI Blog", "Google AI Blog"],
     "📊 国内IT・ビジネス": ["ITmedia", "日経XTECH"],
 }
