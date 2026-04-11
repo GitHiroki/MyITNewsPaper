@@ -1,6 +1,7 @@
 # 🌅 Morning News Digest
 
-毎朝7時にニュースを自動収集・AI要約して、GitHub PagesにHTML公開 → SlackにURLを通知するツール。
+- 毎朝7時にニュースを自動収集・AI要約して1ページのhtmlを作成するツール。
+- 新聞のように朝読むことを想定している。
 
 ## 購読ソース
 
@@ -18,37 +19,28 @@ Actionsの手動実行
 
 ## ローカルでのテスト実行
 
-```bash
-# 依存関係インストール
-pip install -r requirements.txt
+### 依存関係インストール
+- `pip install -r requirements.txt`
 
-# 環境変数をセット
-export ANTHROPIC_API_KEY="..."
+### 環境変数をセット
+- `export ANTHROPIC_API_KEY="..."`
 
-# dry-run: Slack未送信・index.html をローカル出力
-python main.py --dry-run
+### 実行
+- `python main.py`
 
-# ブラウザで確認
-open index.html
-```
+### 確認
+- 同ディレクトリに`index.html`が出力されるので確認する
 
 ## カスタマイズ
 
 ### ソースを追加・削除する
 
-`fetch_news.py` の `RSS_FEEDS` 辞書を編集するだけでOK：
-
-```python
-RSS_FEEDS = {
-    "Zenn トレンド": "https://zenn.dev/feed",
-    # 追加例
-    "Qiita トレンド": "https://qiita.com/popular-items/feed",
-}
-```
+1. `fetch_news.py`の`RSS_FEEDS`の追加
+2. `summarize.py`のnews名の追加
 
 ### 通知時間を変える
 
-`.github/workflows/morning_digest.yml` の cron を変更：
+`.github/workflows/morning_digest.yml`のcronを変更
 
 ```yaml
 # 例：8時に変更（UTC 23:00）
