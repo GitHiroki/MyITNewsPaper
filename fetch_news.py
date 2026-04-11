@@ -17,6 +17,7 @@ RSS_FEEDS = {
     "Google AI Blog": "https://blog.research.google/feeds/posts/default",
     "ITmedia": "https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml",
     "日経XTECH": "https://xtech.nikkei.com/rss/index.rdf",
+    "gihyo.jp": "https://gihyo.jp/feed/rss1",
 }
 
 MAX_ARTICLES_PER_SOURCE = 5  # ソースごとの最大記事数
