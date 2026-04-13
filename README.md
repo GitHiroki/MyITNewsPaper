@@ -8,7 +8,7 @@
 | カテゴリ | ソース |
 |----------|--------|
 | 技術 | Zenn トレンド, GitHub Trending, Hacker News, dev.to, gihyo.jp |
-| AI・LLM | OpenAI Blog, Google AI Blog |
+| AI・LLM | OpenAI Blog, Google Research Blog |
 | 国内IT・ビジネス | ITmedia, 日経XTECH |
 
 ---

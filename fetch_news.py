@@ -14,7 +14,7 @@ RSS_FEEDS = {
     "Hacker News": "https://hnrss.org/frontpage?count=20",
     "dev.to": "https://dev.to/feed",
     "OpenAI Blog": "https://openai.com/blog/rss.xml",
-    "Google AI Blog": "https://blog.research.google/feeds/posts/default",
+    "Google Research Blog": "https://blog.google/technology/research/rss/",
     "ITmedia": "https://rss.itmedia.co.jp/rss/2.0/itmedia_all.xml",
     "日経XTECH": "https://xtech.nikkei.com/rss/index.rdf",
     "gihyo.jp": "https://gihyo.jp/feed/rss1",
