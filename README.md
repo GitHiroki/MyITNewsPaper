@@ -9,6 +9,7 @@
 |----------|--------|
 | 技術 | Zenn トレンド, GitHub Trending, Hacker News, dev.to, gihyo.jp |
 | AI・LLM | OpenAI Blog, Google Research Blog |
+| セキュリティ | The Hacker News |
 | 国内IT・ビジネス | ITmedia, 日経XTECH |
 
 ---
