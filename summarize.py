@@ -26,6 +26,17 @@ SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
 必ずJSON配列のみを返してください（前置き・コードブロック不要）:
 [{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
 
+GITHUB_TRENDING_SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
+GitHub Trendingのリポジトリ情報を受け取り、JSON形式で返してください。
+
+ルール:
+- title はそのまま変更しない（リポジトリ名なので翻訳しない）
+- description を自然な日本語に翻訳して summary に入れる
+- description が空の場合は summary も空文字にする
+
+必ずJSON配列のみを返してください（前置き・コードブロック不要）:
+[{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
+
 GROUPS = {
     "🛠 技術": ["Zenn トレンド", "GitHub Trending", "Hacker News", "dev.to", "gihyo.jp"],
     "🤖 AI・LLM": ["OpenAI Blog", "Google Research Blog"],
@@ -39,9 +50,32 @@ def summarize_source(source_name: str, articles: list[dict[str, Any]]) -> list[d
     if not articles:
         return []
 
-    # GitHub Trending はサマリ不要
+    # GitHub Trending はdescriptionを日本語に翻訳して使う
     if source_name == "GitHub Trending":
-        return [{"title_ja": a["title"], "url": a["url"], "summary": ""} for a in articles]
+        articles_text = ""
+        for i, a in enumerate(articles, 1):
+            articles_text += f"{i}. title: {a['title']}\n"
+            articles_text += f"   description: {a.get('summary', '')}\n"
+            articles_text += f"   URL: {a['url']}\n\n"
+
+        prompt = f"以下のGitHub Trendingリポジトリ情報を翻訳してJSON配列で返してください。\n\n{articles_text}"
+
+        try:
+            message = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}],
+                system=GITHUB_TRENDING_SYSTEM_PROMPT,
+            )
+            raw = message.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = "\n".join(raw.split("\n")[1:])
+            if raw.endswith("```"):
+                raw = "\n".join(raw.split("\n")[:-1])
+            return json.loads(raw)
+        except Exception as e:
+            print(f"[WARN] {source_name} の翻訳失敗: {e}")
+            return [{"title_ja": a["title"], "url": a["url"], "summary": a.get("summary", "")} for a in articles]
 
     articles_text = ""
     for i, a in enumerate(articles, 1):
