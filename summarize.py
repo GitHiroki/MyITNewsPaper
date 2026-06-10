@@ -39,9 +39,9 @@ def summarize_source(source_name: str, articles: list[dict[str, Any]]) -> list[d
     if not articles:
         return []
 
-    # GitHub Trending はサマリ不要
+    # GitHub Trending はAPI要約不要、descriptionをそのまま使う
     if source_name == "GitHub Trending":
-        return [{"title_ja": a["title"], "url": a["url"], "summary": ""} for a in articles]
+        return [{"title_ja": a["title"], "url": a["url"], "summary": a.get("summary", "")} for a in articles]
 
     articles_text = ""
     for i, a in enumerate(articles, 1):
