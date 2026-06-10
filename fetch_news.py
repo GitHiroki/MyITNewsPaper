@@ -56,24 +56,43 @@ def fetch_github_trending() -> list[dict[str, Any]]:
             def __init__(self):
                 super().__init__()
                 self.repos = []
+                self._in_article = False
                 self._in_h2 = False
+                self._in_desc_p = False
                 self._current_text = ""
+                self._current_repo = None
+                self._current_desc = ""
 
             def handle_starttag(self, tag, attrs):
                 attrs_dict = dict(attrs)
-                if tag == "h2" and "lh-condensed" in attrs_dict.get("class", ""):
+                classes = attrs_dict.get("class", "")
+                if tag == "article" and "Box-row" in classes:
+                    self._in_article = True
+                    self._current_repo = None
+                    self._current_desc = ""
+                elif tag == "h2" and "lh-condensed" in classes:
                     self._in_h2 = True
+                    self._current_text = ""
+                elif tag == "p" and "col-9" in classes and "color-fg-muted" in classes:
+                    self._in_desc_p = True
                     self._current_text = ""
 
             def handle_endtag(self, tag):
                 if tag == "h2" and self._in_h2:
                     self._in_h2 = False
                     text = self._current_text.strip().replace("\n", "").replace(" ", "")
-                    if "/" in text and len(self.repos) < MAX_ARTICLES_PER_SOURCE:
-                        self.repos.append(text)
+                    if "/" in text:
+                        self._current_repo = text
+                elif tag == "p" and self._in_desc_p:
+                    self._in_desc_p = False
+                    self._current_desc = " ".join(self._current_text.split())
+                elif tag == "article" and self._in_article:
+                    self._in_article = False
+                    if self._current_repo and len(self.repos) < MAX_ARTICLES_PER_SOURCE:
+                        self.repos.append({"name": self._current_repo, "description": self._current_desc})
 
             def handle_data(self, data):
-                if self._in_h2:
+                if self._in_h2 or self._in_desc_p:
                     self._current_text += data
 
         parser = TrendingParser()
@@ -83,9 +102,9 @@ def fetch_github_trending() -> list[dict[str, Any]]:
         for repo in parser.repos:
             articles.append({
                 "source": "GitHub Trending",
-                "title": repo,
-                "url": f"https://github.com/{repo}",
-                "summary": "",
+                "title": repo["name"],
+                "url": f"https://github.com/{repo['name']}",
+                "summary": repo["description"],
                 "published": "",
             })
         return articles
