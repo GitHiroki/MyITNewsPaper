@@ -1,0 +1,19 @@
+name: Keep Workflow Enabled
+
+on:
+  schedule:
+    # 毎月1日・15日 00:00 UTC に実行（GitHub Actions の60日自動停止を回避）
+    - cron: "0 0 1,15 * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  keep-enabled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-enable Morning News Digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow enable morning_digest.yml --repo ${{ github.repository }}
