@@ -62,3 +62,18 @@ jobs:
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "{\"text\": \"📰 朝のニュースダイジェストが更新されました\n${{ steps.deployment.outputs.page_url }}\"}"
+
+  # --- ③ build / deploy のいずれかが失敗したら Slack 通知 ---
+  notify-failure:
+    needs: [build, deploy]
+    if: failure() # いずれかの needs が失敗したときのみ実行
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (failure)
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"❌ 朝のニュースダイジェストの生成に失敗しました\nワークフローを確認してください: ${RUN_URL}\"}"
