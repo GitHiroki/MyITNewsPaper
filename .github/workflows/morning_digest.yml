@@ -36,7 +36,7 @@ jobs:
       - name: Generate digest HTML
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python main.py
+        run: exit 1 # ★検証用：build を強制失敗させる（API課金なし）。確認後に revert する
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
