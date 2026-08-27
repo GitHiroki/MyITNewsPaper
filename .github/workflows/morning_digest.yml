@@ -21,6 +21,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # サマリ生成の結果を deploy ジョブへ渡す（status: ok | degraded | fatal）
+    outputs:
+      status: ${{ steps.digest.outputs.status }}
+      reason: ${{ steps.digest.outputs.reason }}
+      ok_sources: ${{ steps.digest.outputs.ok_sources }}
+      total_sources: ${{ steps.digest.outputs.total_sources }}
+      failed_sources: ${{ steps.digest.outputs.failed_sources }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +41,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate digest HTML
+        id: digest
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python main.py
@@ -55,13 +63,44 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
+      # サマリ生成が劣化していた場合は ⚠️ 版に差し替えて原因を本文に載せる
       - name: Notify Slack
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          STATUS: ${{ needs.build.outputs.status }}
+          REASON: ${{ needs.build.outputs.reason }}
+          OK_SOURCES: ${{ needs.build.outputs.ok_sources }}
+          TOTAL_SOURCES: ${{ needs.build.outputs.total_sources }}
+          FAILED_SOURCES: ${{ needs.build.outputs.failed_sources }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "{\"text\": \"📰 朝のニュースダイジェストが更新されました\n${{ steps.deployment.outputs.page_url }}\"}"
+          set -euo pipefail
+          case "${STATUS:-}" in
+            ok)
+              TEXT="📰 朝のニュースダイジェストが更新されました
+          ${PAGE_URL}"
+              ;;
+            fatal)
+              TEXT="⚠️ サマリを生成できませんでした（${OK_SOURCES}/${TOTAL_SOURCES} ソース）: ${REASON}
+          記事のタイトルとリンクのみのページを公開しています。
+          ページ: ${PAGE_URL}
+          run: ${RUN_URL}"
+              ;;
+            degraded)
+              TEXT="⚠️ 一部のソースでサマリを生成できませんでした（${OK_SOURCES}/${TOTAL_SOURCES} ソース）: ${REASON}
+          失敗したソース: ${FAILED_SOURCES}
+          ページ: ${PAGE_URL}
+          run: ${RUN_URL}"
+              ;;
+            *)
+              TEXT="⚠️ サマリ生成の結果を判定できませんでした（status=\"${STATUS:-未設定}\"）
+          ページ: ${PAGE_URL}
+          run: ${RUN_URL}"
+              ;;
+          esac
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d @-
 
   # --- ③ build / deploy のいずれかが失敗したら Slack 通知 ---
   notify-failure:
@@ -72,8 +111,27 @@ jobs:
       - name: Notify Slack (failure)
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          STATUS: ${{ needs.build.outputs.status }}
+          REASON: ${{ needs.build.outputs.reason }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          curl -s -X POST "$SLACK_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "{\"text\": \"❌ 朝のニュースダイジェストの生成に失敗しました\nワークフローを確認してください: ${RUN_URL}\"}"
+          set -euo pipefail
+          if [ "$BUILD_RESULT" != "success" ]; then
+            FAILED_JOB="build（ニュース取得・HTML生成）"
+          elif [ "$DEPLOY_RESULT" != "success" ]; then
+            FAILED_JOB="deploy（GitHub Pages へのデプロイ）"
+          else
+            FAILED_JOB="不明"
+          fi
+          DETAIL="build=${BUILD_RESULT} / deploy=${DEPLOY_RESULT}"
+          if [ -n "${REASON:-}" ]; then
+            DETAIL="${DETAIL} / サマリ生成: ${STATUS} (${REASON})"
+          fi
+          TEXT="❌ 朝のニュースダイジェストの生成に失敗しました
+          失敗したジョブ: ${FAILED_JOB}
+          判定: ${DETAIL}
+          run: ${RUN_URL}"
+          jq -n --arg text "$TEXT" '{text: $text}' \
+            | curl -s -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d @-
