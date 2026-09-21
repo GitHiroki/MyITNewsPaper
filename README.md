@@ -25,6 +25,7 @@ Actionsの手動実行
 
 ### 環境変数をセット
 - `export ANTHROPIC_API_KEY="..."`
+- （任意）`export CLAUDE_MODEL="claude-sonnet-4-6"` … サマリ生成のモデルを上書きする
 
 ### 実行
 - `python main.py`
@@ -38,6 +39,14 @@ Actionsの手動実行
 
 1. `fetch_news.py`の`RSS_FEEDS`の追加
 2. `summarize.py`のnews名の追加
+
+### サマリ生成のモデルを変える
+
+既定は `claude-haiku-4-5`。ニュース見出しの要約・翻訳という定型タスクなので Haiku で足りる、
+という判断（コストは Sonnet の約1/3）。品質を上げたいときは `CLAUDE_MODEL` で上書きする。
+
+GitHub Actions で変えるなら `morning_digest.yml` の `Generate digest HTML` ステップに
+`CLAUDE_MODEL` を足す。
 
 ### 通知時間を変える
 

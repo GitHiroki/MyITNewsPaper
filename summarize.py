@@ -22,6 +22,10 @@ JST = timezone(timedelta(hours=9))
 MAX_ATTEMPTS = 3        # 一時的なエラー時の最大試行回数（初回 + リトライ2回）
 RETRY_BASE_WAIT = 2.0   # 指数バックオフの基準秒数
 
+# サマリ生成はニュース見出しの要約・翻訳という定型タスクなので Haiku で足りる。
+# Sonnet に戻したいときは CLAUDE_MODEL で上書きする。
+MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5")
+
 REQUIRED_KEYS = ("title_ja", "url", "summary")
 
 _client: anthropic.Anthropic | None = None
@@ -152,7 +156,7 @@ def _call_claude(system: str, prompt: str, max_tokens: int) -> str:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             message = client.messages.create(
-                model="claude-sonnet-4-6",
+                model=MODEL,
                 max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}],
                 system=system,
