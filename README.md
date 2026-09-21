@@ -59,6 +59,16 @@ GitHub Actions で変えるなら `morning_digest.yml` の `Generate digest HTML
 
 
 
+## デザイン
+
+ページの見た目は [デジタル庁デザインシステム（DADS）](https://design.digital.go.jp/dads/) に準拠しています。
+色・角丸・フォントの値は `@digital-go-jp/design-tokens` v2.0.1 から引用し、
+`summarize.py` の `STYLE` に CSS 変数としてまとめてあります。
+
+- キーカラーは Blue-900 `#0017c1`。リンクはキーカラー＋下線
+- 書体は Noto Sans JP に統一
+- 「本文へスキップ」リンクとフォーカスインジケーターを用意
+
 ## サマリ生成に失敗したとき
 
 AI 要約が作れなくても、**タイトル一覧だけのページは毎朝公開する**方針です。

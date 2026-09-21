@@ -80,10 +80,10 @@ GitHub Trendingのリポジトリ情報を受け取り、JSON形式で返して�
 [{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
 
 GROUPS = {
-    "🛠 技術": ["Zenn トレンド", "GitHub Trending", "Hacker News", "dev.to", "gihyo.jp"],
-    "🤖 AI・LLM": ["OpenAI Blog", "Google Research Blog"],
-    "🔒 セキュリティ": ["The Hacker News"],
-    "📊 国内IT・ビジネス": ["ITmedia", "日経XTECH"],
+    "技術": ["Zenn トレンド", "GitHub Trending", "Hacker News", "dev.to", "gihyo.jp"],
+    "AI・LLM": ["OpenAI Blog", "Google Research Blog"],
+    "セキュリティ": ["The Hacker News"],
+    "国内IT・ビジネス": ["ITmedia", "日経XTECH"],
 }
 
 
@@ -256,6 +256,158 @@ def summarize_source(source_name: str, articles: list[dict[str, Any]]) -> Source
         return SourceResult(source_name, fallback_items(articles, keep_summary=is_trending), ok=False, reason=reason)
 
 
+# デジタル庁デザインシステム（DADS）のスタイル
+# 色・角丸・フォントの値は @digital-go-jp/design-tokens v2.0.1 (dist/tokens.css) より
+# https://design.digital.go.jp/dads/
+STYLE = """
+    :root {
+      --color-key-50: #e8f1fe;
+      --color-key-100: #d9e6ff;
+      --color-key-200: #c5d7fb;
+      --color-key-900: #0017c1;   /* キーカラー */
+      --color-key-1000: #00118f;
+      --color-key-1200: #000060;
+      --color-white: #ffffff;
+      --color-gray-50: #f2f2f2;
+      --color-gray-100: #e6e6e6;
+      --color-gray-200: #cccccc;
+      --color-gray-536: #767676;  /* 4.5:1 を満たす最も薄いグレー */
+      --color-gray-700: #4d4d4d;
+      --color-gray-800: #333333;
+      --color-gray-900: #1a1a1a;  /* 本文色 */
+      --color-warning-1: #b78f00;
+      --color-warning-bg: #fbf5e0;
+      --color-success-1: #259d63;
+      --color-focus-ring: #ffc700;
+      --radius-4: 4px;
+      --radius-8: 8px;
+      --font-sans: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--color-gray-900);
+      background: var(--color-gray-50);
+      -webkit-font-smoothing: antialiased;
+    }
+    /* DADS のフォーカスインジケーター（黒アウトライン + 黄色リング） */
+    a:focus-visible, .skip-link:focus {
+      outline: 2px solid var(--color-gray-900);
+      outline-offset: 0;
+      box-shadow: 0 0 0 4px var(--color-focus-ring);
+      border-radius: var(--radius-4);
+    }
+    .skip-link {
+      position: absolute; left: 16px; top: -48px;
+      background: var(--color-white); color: var(--color-key-900);
+      padding: 8px 16px; border-radius: var(--radius-4); font-weight: 700;
+      transition: top .15s;
+    }
+    .skip-link:focus { top: 8px; z-index: 100; }
+    header {
+      background: var(--color-white);
+      border-bottom: 1px solid var(--color-gray-200);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-inner {
+      max-width: 1120px; margin: 0 auto;
+      padding: 16px 24px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .logo {
+      font-size: 20px; font-weight: 700; letter-spacing: .02em;
+      color: var(--color-key-900);
+    }
+    .date-badge {
+      margin-left: auto;
+      font-size: 14px; font-weight: 700;
+      color: var(--color-key-1000); background: var(--color-key-50);
+      border: 1px solid var(--color-key-200);
+      padding: 2px 12px; border-radius: 999px;
+    }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 24px 64px; }
+    .lede { font-size: 14px; color: var(--color-gray-700); margin-bottom: 24px; }
+    .lede .status {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-weight: 700; color: var(--color-success-1);
+    }
+    section { margin-bottom: 40px; }
+    h2 {
+      font-size: 22px; font-weight: 700; line-height: 1.5;
+      padding-left: 12px; margin-bottom: 16px;
+      border-left: 4px solid var(--color-key-900);
+      display: flex; align-items: baseline; gap: 12px;
+    }
+    h2 .count { font-size: 14px; font-weight: 400; color: var(--color-gray-536); }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--color-white);
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-8);
+      overflow: hidden;
+    }
+    .card-header {
+      font-size: 16px; font-weight: 700;
+      color: var(--color-key-1000); background: var(--color-key-50);
+      border-bottom: 1px solid var(--color-key-100);
+      padding: 8px 16px;
+    }
+    ul { list-style: none; }
+    li { border-bottom: 1px solid var(--color-gray-100); }
+    li:last-child { border-bottom: none; }
+    li a {
+      display: block; padding: 12px 16px 4px;
+      font-size: 17px; font-weight: 700; line-height: 1.5;
+      color: var(--color-key-900);
+      text-decoration: underline; text-underline-offset: 3px;
+    }
+    li a:hover { color: var(--color-key-1000); background: var(--color-key-50); }
+    li a:visited { color: var(--color-key-1200); }
+    .summary {
+      font-size: 14px; line-height: 1.7; color: var(--color-gray-700);
+      padding: 0 16px 12px;
+    }
+    /* 劣化時の警告バナー（DADS の Notification Banner 相当） */
+    .notice {
+      background: var(--color-warning-bg);
+      border: 2px solid var(--color-warning-1);
+      border-radius: var(--radius-8);
+      padding: 16px; margin-bottom: 24px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .notice-icon {
+      flex: none; width: 24px; height: 24px; border-radius: 50%;
+      background: var(--color-warning-1); color: var(--color-white);
+      font-size: 15px; font-weight: 700; display: grid; place-items: center;
+      margin-top: 2px;
+    }
+    .notice strong { display: block; font-size: 18px; line-height: 1.5; }
+    .notice p { font-size: 14px; color: var(--color-gray-800); }
+    footer {
+      background: var(--color-gray-900); color: var(--color-white);
+      font-size: 14px; padding: 24px;
+    }
+    .footer-inner {
+      max-width: 1120px; margin: 0 auto;
+      display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline;
+    }
+    footer .muted { color: var(--color-gray-200); }
+    @media (max-width: 600px) {
+      .cards { grid-template-columns: 1fr; }
+      .header-inner { padding: 12px 16px; }
+      .logo { font-size: 17px; }
+      main { padding: 24px 16px 48px; }
+      h2 { font-size: 20px; }
+    }
+"""
+
+
 def _banner_html(report: "DigestReport") -> str:
     """劣化時に HTML 先頭へ出す警告バナー"""
     if report.status == "ok":
@@ -267,10 +419,12 @@ def _banner_html(report: "DigestReport") -> str:
     reason = html_lib.escape(report.reason or "原因不明")
     counts = f"要約成功 {report.ok_sources} / {report.total_sources} ソース"
     return f'''
-    <div class="notice">
-      <strong>⚠️ {headline}</strong>
-      <span>理由: {reason}（{counts}）</span>
-      <span>要約できなかったソースは、記事のタイトルとリンクのみ掲載しています。</span>
+    <div class="notice" role="status">
+      <span class="notice-icon" aria-hidden="true">!</span>
+      <div>
+        <strong>{headline}</strong>
+        <p>理由: {reason}（{counts}）。要約できなかったソースは、記事のタイトルとリンクのみ掲載しています。</p>
+      </div>
     </div>'''
 
 
@@ -321,13 +475,16 @@ def build_html(all_news: dict[str, list[dict[str, Any]]]) -> tuple[str, DigestRe
     banner_html = _banner_html(report)
 
     # HTML生成
+    total_items = 0
     sections_html = ""
     for group_name, source_names in GROUPS.items():
         cards_html = ""
+        group_items = 0
         for source_name in source_names:
             items = summarized.get(source_name, [])
             if not items:
                 continue
+            group_items += len(items)
 
             items_html = ""
             for item in items:
@@ -346,12 +503,19 @@ def build_html(all_news: dict[str, list[dict[str, Any]]]) -> tuple[str, DigestRe
             </div>"""
 
         if cards_html:
+            total_items += group_items
             sections_html += f"""
           <section>
-            <h2>{group_name}</h2>
+            <h2>{group_name}<span class="count">{group_items}件</span></h2>
             <div class="cards">{cards_html}
             </div>
           </section>"""
+
+    status_html = '<span class="status">● 全ソース要約済み</span>' if report.status == "ok" else ""
+    lede_html = (
+        f'<p class="lede">{report.total_sources}ソースから {total_items} 件をお届けします。'
+        f'{status_html}</p>'
+    )
 
     html = f"""<!DOCTYPE html>
 <html lang="ja">
@@ -360,181 +524,27 @@ def build_html(all_news: dict[str, list[dict[str, Any]]]) -> tuple[str, DigestRe
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>朝のニュースダイジェスト - {today}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <style>
-    :root {{
-      --bg: #f5f0e8;
-      --surface: #faf7f2;
-      --surface2: #ede8de;
-      --border: #c8bfb0;
-      --border-dark: #8c7b6a;
-      --accent: #c0622a;
-      --text: #1a1410;
-      --text-muted: #6b5e52;
-      --radius: 3px;
-    }}
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{
-      font-family: 'Noto Sans JP', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.7;
-    }}
-    header {{
-      background: var(--surface);
-      border-bottom: 3px double var(--border-dark);
-      padding: 1.2rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }}
-    .header-inner {{
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      align-items: baseline;
-      gap: 1rem;
-    }}
-    .logo {{
-      font-family: 'EB Garamond', 'Noto Serif JP', serif;
-      font-size: 1.6rem;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: 0.02em;
-    }}
-    .date-badge {{
-      margin-left: auto;
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      border: 1px solid var(--border-dark);
-      padding: 0.2rem 0.6rem;
-      border-radius: 2px;
-      letter-spacing: 0.06em;
-      font-family: 'Noto Sans JP', sans-serif;
-    }}
-    main {{
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
-    }}
-    section {{
-      margin-bottom: 3rem;
-    }}
-    h2 {{
-      font-family: 'EB Garamond', 'Noto Serif JP', serif;
-      font-size: 0.78rem;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 1rem;
-      padding-bottom: 0.4rem;
-      border-bottom: 2px solid var(--border-dark);
-    }}
-    .cards {{
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 1rem;
-    }}
-    .card {{
-      background: var(--surface);
-      border: 1px solid var(--border-dark);
-      border-radius: var(--radius);
-      overflow: hidden;
-      transition: box-shadow 0.2s, transform 0.2s;
-    }}
-    .card:hover {{
-      box-shadow: 3px 3px 0 var(--border-dark);
-      transform: translateY(-1px);
-    }}
-    .card-header {{
-      font-family: 'Noto Sans JP', sans-serif;
-      font-size: 0.68rem;
-      font-weight: 500;
-      color: var(--surface);
-      background: var(--text);
-      padding: 0.35rem 0.9rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }}
-    ul {{
-      list-style: none;
-      padding: 0.25rem 0;
-    }}
-    li {{
-      padding: 0.7rem 1rem;
-      border-bottom: 1px solid var(--surface2);
-    }}
-    li:last-child {{ border-bottom: none; }}
-    li a {{
-      display: block;
-      color: var(--text);
-      text-decoration: none;
-      font-family: 'Noto Serif JP', serif;
-      font-size: 0.88rem;
-      font-weight: 400;
-      line-height: 1.55;
-      margin-bottom: 0.2rem;
-    }}
-    li a:hover {{ color: var(--accent); text-decoration: underline; text-decoration-color: var(--accent); }}
-    li a::before {{
-      content: '— ';
-      color: var(--accent);
-    }}
-    .summary {{
-      font-size: 0.77rem;
-      color: var(--text-muted);
-      line-height: 1.65;
-      margin-top: 0.15rem;
-      font-family: 'Noto Sans JP', sans-serif;
-    }}
-    .notice {{
-      max-width: 1100px;
-      margin: 0 auto 2rem;
-      padding: 0.9rem 1.1rem;
-      background: #fdf2e0;
-      border: 1px solid var(--accent);
-      border-left: 5px solid var(--accent);
-      border-radius: var(--radius);
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }}
-    .notice strong {{
-      font-family: 'Noto Serif JP', serif;
-      font-size: 0.95rem;
-      color: var(--accent);
-    }}
-    .notice span {{
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }}
-    footer {{
-      text-align: center;
-      padding: 2rem;
-      color: var(--text-muted);
-      font-size: 0.78rem;
-      border-top: 2px solid var(--border-dark);
-      font-family: 'EB Garamond', serif;
-      letter-spacing: 0.05em;
-    }}
-    @media (max-width: 600px) {{
-      .cards {{ grid-template-columns: 1fr; }}
-      header {{ padding: 1rem; }}
-    }}
-  </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>{STYLE}</style>
 </head>
 <body>
+  <a class="skip-link" href="#main">本文へスキップ</a>
   <header>
     <div class="header-inner">
-      <div class="logo">📰 Morning Digest</div>
+      <div class="logo">Morning Digest</div>
       <div class="date-badge">{today_iso}</div>
     </div>
   </header>
-  <main>{banner_html}{sections_html}
+  <main id="main">{banner_html}
+    {lede_html}{sections_html}
   </main>
-  <footer>Generated by Claude API · {today}</footer>
+  <footer>
+    <div class="footer-inner">
+      <span>Morning News Digest</span>
+      <span class="muted">Generated by Claude API · {today}</span>
+    </div>
+  </footer>
 </body>
 </html>"""
 
