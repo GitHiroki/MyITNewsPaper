@@ -112,6 +112,7 @@ def main():
         print(f"   - {name}: 致命的エラーのため未実行")
 
     write_github_output(report)
+    score.write_github_output(score_report)
     write_step_summary(report)
     score.write_step_summary(score_report)
 
