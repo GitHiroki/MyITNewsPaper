@@ -216,6 +216,16 @@ def rank_and_trim(all_news: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, 
     return trimmed, report
 
 
+def print_picks(report: ScoreReport) -> None:
+    """採用した記事とスコア、トークン使用量をログに出す（Step Summary を開かなくても確認できるように）"""
+    print(f"   tokens: in {report.input_tokens:,} / out {report.output_tokens:,}")
+    for name, picks in report.picks.items():
+        print(f"   [{name}]")
+        for sc, title in picks:
+            s = "  —  " if sc is None else f"{sc:.2f}"
+            print(f"     {s}  {title[:70]}")
+
+
 def write_step_summary(report: ScoreReport) -> None:
     """Actions の画面に Jev の選別結果を出す（閾値やプロフィール調整用）"""
     path = os.environ.get("GITHUB_STEP_SUMMARY")

@@ -11,6 +11,7 @@ main.py
 """
 
 import os
+import time
 
 import score
 from fetch_news import fetch_all_news
@@ -85,12 +86,15 @@ def main():
 
     if score.enabled():
         print(f"🧭 Jev で記事を選別中（{score.JEV_MODEL}）...")
+    started = time.monotonic()
     all_news, score_report = score.rank_and_trim(all_news)
     if score_report.status != "disabled":
         print(
             f"✅ 判定 {score_report.scored} 件 / 失敗 {score_report.failed} 件 / "
-            f"除外 {score_report.dropped} 件\n"
+            f"除外 {score_report.dropped} 件（{time.monotonic() - started:.1f}秒）"
         )
+        score.print_picks(score_report)
+        print()
 
     print("🤖 Claude APIでサマリ生成・HTML構築中...")
     html, report = build_html(all_news)
