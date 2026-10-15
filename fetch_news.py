@@ -3,6 +3,8 @@ fetch_news.py
 各ソースからニュース記事を取得する
 """
 
+import os
+
 import feedparser
 import requests
 from datetime import datetime, timezone
@@ -21,7 +23,10 @@ RSS_FEEDS = {
     "gihyo.jp": "https://gihyo.jp/feed/rss1",
 }
 
-MAX_ARTICLES_PER_SOURCE = 5  # ソースごとの最大記事数
+# ソースごとに取得する候補記事数。
+# Jev で選別するとき（TYPESAFE_API_KEY あり）は多めに取り、score.py で上位 KEEP_PER_SOURCE 件に絞る。
+_HAS_JEV = bool(os.environ.get("TYPESAFE_API_KEY") or os.environ.get("JEV_API_KEY"))
+MAX_ARTICLES_PER_SOURCE = int(os.environ.get("FETCH_PER_SOURCE", "12" if _HAS_JEV else "5"))
 
 
 def fetch_rss(name: str, url: str) -> list[dict[str, Any]]:
