@@ -64,8 +64,8 @@ class ScoreReport:
     failed: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
-    # ソース名 -> [(score, title)]（残した記事のみ、ログ・Step Summary 用）
-    picks: dict[str, list[tuple[float | None, str]]] = field(default_factory=dict)
+    # ソース名 -> [(score, title, url)]（残した記事のみ、ログ・Step Summary 用）
+    picks: dict[str, list[tuple[float | None, str, str]]] = field(default_factory=dict)
     dropped: int = 0
     aborted: str = ""                   # 途中で打ち切った理由（時間切れ・認証エラー）
 
@@ -209,11 +209,20 @@ def rank_and_trim(all_news: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, 
             )
         kept = ranked[:KEEP_PER_SOURCE]
         trimmed[name] = [a for _, a in kept]
-        report.picks[name] = [(scores[(name, i)], a.get("title", "")) for i, a in kept]
+        report.picks[name] = [(scores[(name, i)], a.get("title", ""), a.get("url", "")) for i, a in kept]
         report.dropped += len(arts) - len(kept)
 
     report.status = "ok" if report.failed == 0 else "degraded"
     return trimmed, report
+
+
+def _md_link(title: str, url: str) -> str:
+    """表のセルに入れる Markdown リンク。表や リンク記法を壊す文字を逃がす"""
+    text = title.replace("|", "/").replace("[", "［").replace("]", "］")
+    if not url.startswith(("http://", "https://")):
+        return text
+    url = url.replace(" ", "%20").replace("(", "%28").replace(")", "%29").replace("|", "%7C")
+    return f"[{text}]({url})"
 
 
 def write_step_summary(report: ScoreReport) -> None:
@@ -239,9 +248,9 @@ def write_step_summary(report: ScoreReport) -> None:
             "|---|---|---|",
         ]
         for name, picks in report.picks.items():
-            for score, title in picks:
+            for score, title, url in picks:
                 s = "—" if score is None else f"{score:.2f}"
-                lines.append(f"| {name} | {s} | {title.replace('|', '/')} |")
+                lines.append(f"| {name} | {s} | {_md_link(title, url)} |")
 
     with open(path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
@@ -259,6 +268,6 @@ if __name__ == "__main__":
     print(f"status={rep.status} scored={rep.scored} failed={rep.failed} "
           f"tokens in={rep.input_tokens} out={rep.output_tokens} {rep.aborted}")
     for name, picks in rep.picks.items():
-        for sc, t in picks:
+        for sc, t, _ in picks:
             flag = "" if sc is None or 0 <= sc <= 4 else "  ← 0〜4 の範囲外"
             print(f"  [{name}] {sc} {t[:60]}{flag}")
