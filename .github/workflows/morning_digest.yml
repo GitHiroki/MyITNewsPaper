@@ -46,8 +46,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # 未設定なら Jev の選別はスキップされ、従来どおり動く
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-          # ログを1行ずつ即時に出す（バッファされると全行が同じ時刻になり、どこに時間がかかったか分からない）
-          PYTHONUNBUFFERED: "1"
         run: python main.py
 
       - name: Upload Pages artifact
