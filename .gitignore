@@ -11,7 +11,7 @@ __pycache__/
 *.pyo
 
 # 生成ファイル
-index.html
+public/
 
 # Claude Code
 CLAUDE.md

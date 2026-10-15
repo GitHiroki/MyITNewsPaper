@@ -16,7 +16,9 @@ import score
 from fetch_news import fetch_all_news
 from summarize import DigestReport, build_html
 
-OUTPUT_FILE = "index.html"
+# Pages にはこのディレクトリだけを公開する（ソース一式を配信しないため）
+OUTPUT_DIR = "public"
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "index.html")
 
 
 def _oneline(text: str) -> str:
@@ -95,6 +97,7 @@ def main():
     print("🤖 Claude APIでサマリ生成・HTML構築中...")
     html, report = build_html(all_news)
 
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"📄 {OUTPUT_FILE} を生成しました")
