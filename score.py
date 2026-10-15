@@ -12,7 +12,11 @@ Jev は文章を書かず、状態を読んで score / choice / yes-no を返す
 - 1ソースの全記事が失敗 → そのソースは従来どおり先頭から KEEP 件
 """
 
+import html
+import math
 import os
+import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -29,6 +33,9 @@ KEEP_PER_SOURCE = int(os.environ.get("KEEP_PER_SOURCE", "5"))
 MAX_WORKERS = 4
 MAX_ATTEMPTS = 3
 TIMEOUT_SEC = 30
+# 選別全体にかける上限秒数。Jev が詰まってもジョブの timeout（15分）に食い込ませない。
+# 超えた分の記事は「判定失敗」扱いになり、フォールバックで先頭から採用される
+BUDGET_SEC = float(os.environ.get("JEV_BUDGET_SEC", "240"))
 
 INTERESTS_FILE = Path(__file__).with_name("interests.md")
 
@@ -60,6 +67,7 @@ class ScoreReport:
     # ソース名 -> [(score, title)]（残した記事のみ、ログ・Step Summary 用）
     picks: dict[str, list[tuple[float | None, str]]] = field(default_factory=dict)
     dropped: int = 0
+    aborted: str = ""                   # 途中で打ち切った理由（時間切れ・認証エラー）
 
 
 def _load_profile() -> str:
@@ -69,12 +77,36 @@ def _load_profile() -> str:
         return "Web系のバックエンドエンジニア。AIエージェントの実践的な活用、開発ツール、設計に関心がある。"
 
 
+def _plain(text: str) -> str:
+    """RSS の summary に混ざる HTML タグ・実体参照を落として1行にする"""
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", text)).split())
+
+
+class _Abort:
+    """期限切れや認証エラーで、残りの記事の判定をまとめて打ち切るためのフラグ"""
+
+    def __init__(self, budget_sec: float):
+        self.deadline = time.monotonic() + budget_sec
+        self._event = threading.Event()
+        self.reason = ""
+
+    def stop(self, reason: str) -> None:
+        if not self._event.is_set():
+            self.reason = reason
+            self._event.set()
+
+    def check(self) -> bool:
+        if not self._event.is_set() and time.monotonic() > self.deadline:
+            self.stop(f"時間切れ（{BUDGET_SEC:.0f}秒）")
+        return self._event.is_set()
+
+
 def _build_request(article: dict[str, Any], profile: str) -> dict:
     # 日付や件数の比較は Jev が苦手なので渡さない。意味的な判断だけ任せる
     state = {
         "source": article.get("source", ""),
         "title": article.get("title", ""),
-        "excerpt": (article.get("summary") or "")[:500],
+        "excerpt": _plain(article.get("summary") or "")[:500],
     }
     return {
         "model": JEV_MODEL,
@@ -92,13 +124,15 @@ def _build_request(article: dict[str, Any], profile: str) -> dict:
     }
 
 
-def _score_one(article: dict[str, Any], profile: str, key: str) -> tuple[float | None, dict]:
+def _score_one(article: dict[str, Any], profile: str, key: str, abort: _Abort) -> tuple[float | None, dict]:
     """1記事を判定して (score, usage) を返す。失敗時は (None, {})"""
     body = _build_request(article, profile)
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
     title = article.get("title", "")[:40]
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        if abort.check():
+            return None, {}
         last = attempt == MAX_ATTEMPTS
         try:
             res = requests.post(JEV_URL, json=body, headers=headers, timeout=TIMEOUT_SEC)
@@ -116,12 +150,18 @@ def _score_one(article: dict[str, Any], profile: str, key: str) -> tuple[float |
         # 401/422 などはリトライしても直らない
         if res.status_code != 200:
             print(f"  [WARN] Jev 判定失敗: {title} — HTTP {res.status_code}: {res.text[:200]}")
+            # キーの誤りは全記事で同じ結果になるので、残りは呼ばずに打ち切る
+            if res.status_code in (401, 403):
+                abort.stop(f"認証エラー（HTTP {res.status_code}）")
             return None, {}
         try:
             data = res.json()
-            return float(data["answers"]["value"]["score"]), data.get("usage", {})
+            score = float(data["answers"]["value"]["score"])
+            if not math.isfinite(score):
+                raise ValueError(score)
+            return score, data.get("usage") or {}
         except Exception as e:
-            print(f"  [WARN] Jev 応答のパース失敗: {title} — {type(e).__name__}")
+            print(f"  [WARN] Jev 応答のパース失敗: {title} — {type(e).__name__}: {res.text[:200]}")
             return None, {}
     return None, {}
 
@@ -138,9 +178,13 @@ def rank_and_trim(all_news: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, 
 
     profile = _load_profile()
     jobs = [(name, i, a) for name, arts in all_news.items() for i, a in enumerate(arts)]
+    abort = _Abort(BUDGET_SEC)
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        results = list(pool.map(lambda j: _score_one(j[2], profile, key), jobs))
+        results = list(pool.map(lambda j: _score_one(j[2], profile, key, abort), jobs))
+    if abort.reason:
+        report.aborted = abort.reason
+        print(f"  [WARN] Jev の判定を打ち切りました: {abort.reason}")
 
     scores: dict[tuple[str, int], float | None] = {}
     for (name, i, _), (score, usage) in zip(jobs, results):
@@ -186,6 +230,10 @@ def write_step_summary(report: ScoreReport) -> None:
         lines += [
             f"{icon} 判定 {report.scored} 件 / 失敗 {report.failed} 件 / 除外 {report.dropped} 件"
             f"（tokens: in {report.input_tokens:,} / out {report.output_tokens:,}）",
+        ]
+        if report.aborted:
+            lines += ["", f"途中で打ち切り：{report.aborted}。未判定の記事は元の並び順で扱いました。"]
+        lines += [
             "",
             "| ソース | スコア | 採用した記事 |",
             "|---|---|---|",
@@ -197,3 +245,20 @@ def write_step_summary(report: ScoreReport) -> None:
 
     with open(path, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+
+
+if __name__ == "__main__":
+    # スモークテスト：各ソースの先頭2件だけ実際に採点して、生のスコアを表示する
+    #   TYPESAFE_API_KEY=... python score.py
+    from fetch_news import fetch_all_news
+
+    if not enabled():
+        raise SystemExit("TYPESAFE_API_KEY（または JEV_API_KEY）を設定してください")
+    sample = {name: arts[:2] for name, arts in fetch_all_news().items()}
+    _, rep = rank_and_trim(sample)
+    print(f"status={rep.status} scored={rep.scored} failed={rep.failed} "
+          f"tokens in={rep.input_tokens} out={rep.output_tokens} {rep.aborted}")
+    for name, picks in rep.picks.items():
+        for sc, t in picks:
+            flag = "" if sc is None or 0 <= sc <= 4 else "  ← 0〜4 の範囲外"
+            print(f"  [{name}] {sc} {t[:60]}{flag}")
