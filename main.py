@@ -12,6 +12,7 @@ main.py
 
 import os
 
+import score
 from fetch_news import fetch_all_news
 from summarize import DigestReport, build_html
 
@@ -82,6 +83,15 @@ def main():
     total = sum(len(v) for v in all_news.values())
     print(f"✅ {len(all_news)}ソース / {total}記事 取得完了\n")
 
+    if score.enabled():
+        print(f"🧭 Jev で記事を選別中（{score.JEV_MODEL}）...")
+    all_news, score_report = score.rank_and_trim(all_news)
+    if score_report.status != "disabled":
+        print(
+            f"✅ 判定 {score_report.scored} 件 / 失敗 {score_report.failed} 件 / "
+            f"除外 {score_report.dropped} 件\n"
+        )
+
     print("🤖 Claude APIでサマリ生成・HTML構築中...")
     html, report = build_html(all_news)
 
@@ -100,6 +110,7 @@ def main():
 
     write_github_output(report)
     write_step_summary(report)
+    score.write_step_summary(score_report)
 
 
 if __name__ == "__main__":

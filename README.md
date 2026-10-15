@@ -48,6 +48,17 @@ Actionsの手動実行
 GitHub Actions で変えるなら `morning_digest.yml` の `Generate digest HTML` ステップに
 `CLAUDE_MODEL` を足す。
 
+### Jev で記事を選別する（任意）
+
+`TYPESAFE_API_KEY` を設定すると、各ソースから多めに候補（既定12件）を取得し、
+Jev（TypeSafe AI）で「自分にとって読む価値」を0〜4でスコア化して、上位5件だけを Claude に要約させる。
+未設定なら従来どおり先頭5件をそのまま使う。
+
+- 読者像は `interests.md` に書く。欲しい記事が落ちる／要らない記事が残るときはここを直す
+- GitHub Actions で使うなら、リポジトリの Secrets に `TYPESAFE_API_KEY` を追加する
+- 選別結果（スコアと採用記事）は Actions の Step Summary に出る
+- 環境変数で調整できる：`FETCH_PER_SOURCE`（候補数）、`KEEP_PER_SOURCE`（残す数）、`JEV_MODEL`（例 `jev-1.13.0` でピン留め）
+
 ### 通知時間を変える
 
 `.github/workflows/morning_digest.yml`のcronを変更
