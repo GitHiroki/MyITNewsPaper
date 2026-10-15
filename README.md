@@ -31,7 +31,7 @@ Actionsの手動実行
 - `python main.py`
 
 ### 確認
-- 同ディレクトリに`index.html`が出力されるので確認する
+- `public/index.html`が出力されるので、ブラウザで開いて確認する（GitHub Pages にはこの `public/` だけが公開される）
 
 ## カスタマイズ
 

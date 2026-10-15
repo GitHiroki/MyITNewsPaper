@@ -51,7 +51,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .   # index.html があるディレクトリ
+          path: public   # main.py が index.html を書き出すディレクトリ。ここだけを公開する
 
   # --- ② GitHub Pages にデプロイ ---
   deploy:
