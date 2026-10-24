@@ -10,6 +10,8 @@ Jev は文章を書かず、状態を読んで score / choice / yes-no を返す
 - TYPESAFE_API_KEY が無い → スコアリングせず、従来どおり先頭から KEEP 件
 - 個別記事の判定に失敗 → その記事は元の並び順で後ろに回す
 - 1ソースの全記事が失敗 → そのソースは従来どおり先頭から KEEP 件
+- スコアが MIN_SCORE 未満の記事は残さない。ただし閾値で全部切れたソースは、
+  閾値なしと同じくスコア上位から KEEP 件残す
 """
 
 import html
@@ -30,6 +32,8 @@ JEV_URL = os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai/v1/systemone")
 JEV_MODEL = os.environ.get("JEV_MODEL", "jev-latest")
 
 KEEP_PER_SOURCE = int(os.environ.get("KEEP_PER_SOURCE", "5"))
+# これ未満のスコアの記事は残さない（LEVELS の 2 =「時間があれば」以上）
+MIN_SCORE = float(os.environ.get("JEV_MIN_SCORE", "2.0"))
 MAX_WORKERS = 4
 MAX_ATTEMPTS = 3
 TIMEOUT_SEC = 30
@@ -67,6 +71,9 @@ class ScoreReport:
     # ソース名 -> [(score, title, url)]（残した記事のみ、ログ・Step Summary 用）
     picks: dict[str, list[tuple[float | None, str, str]]] = field(default_factory=dict)
     dropped: int = 0
+    below_min: int = 0                  # 閾値（MIN_SCORE）未満で除外した件数
+    # 閾値で全部切れたため、閾値なしで上位を残したソース
+    min_fallback: list[str] = field(default_factory=list)
     aborted: str = ""                   # 途中で打ち切った理由（時間切れ・認証エラー）
 
 
@@ -167,7 +174,7 @@ def _score_one(article: dict[str, Any], profile: str, key: str, abort: _Abort) -
 
 
 def rank_and_trim(all_news: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, list[dict[str, Any]]], ScoreReport]:
-    """ソースごとに Jev スコア順に並べ替え、上位 KEEP_PER_SOURCE 件だけ残す"""
+    """ソースごとに Jev スコア順に並べ替え、MIN_SCORE 以上の上位 KEEP_PER_SOURCE 件だけ残す"""
     report = ScoreReport()
     key = api_key()
 
@@ -207,6 +214,16 @@ def rank_and_trim(all_news: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, 
                 indexed,
                 key=lambda p: (scores[(name, p[0])] is None, -(scores[(name, p[0])] or 0), p[0]),
             )
+            # 閾値未満を落とす。判定失敗（None）は閾値では落とさず、後ろに回したまま
+            def below_min(p: tuple[int, dict]) -> bool:
+                sc = scores[(name, p[0])]
+                return sc is not None and sc < MIN_SCORE
+
+            if any(scores[(name, i)] is not None and not below_min((i, a)) for i, a in indexed):
+                report.below_min += sum(below_min(p) for p in ranked[:KEEP_PER_SOURCE])
+                ranked = [p for p in ranked if not below_min(p)]
+            else:
+                report.min_fallback.append(name)  # 閾値で全部切れたので、閾値なしで上位を残す
         kept = ranked[:KEEP_PER_SOURCE]
         trimmed[name] = [a for _, a in kept]
         report.picks[name] = [(scores[(name, i)], a.get("title", ""), a.get("url", "")) for i, a in kept]
@@ -250,7 +267,15 @@ def write_step_summary(report: ScoreReport) -> None:
         lines += [
             f"{icon} 判定 {report.scored} 件 / 失敗 {report.failed} 件 / 除外 {report.dropped} 件"
             f"（tokens: in {report.input_tokens:,} / out {report.output_tokens:,}）",
+            "",
+            f"閾値 {MIN_SCORE:.2f} 未満で除外：{report.below_min} 件"
+            "（閾値がなければ上位 KEEP 件に入っていた記事）",
         ]
+        if report.min_fallback:
+            lines.append(
+                f"閾値で全部切れたため、スコア上位 {KEEP_PER_SOURCE} 件を残したソース："
+                + "、".join(report.min_fallback)
+            )
         if report.aborted:
             lines += ["", f"途中で打ち切り：{report.aborted}。未判定の記事は元の並び順で扱いました。"]
         lines += [
