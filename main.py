@@ -91,7 +91,7 @@ def main():
     if score_report.status != "disabled":
         print(
             f"✅ 判定 {score_report.scored} 件 / 失敗 {score_report.failed} 件 / "
-            f"除外 {score_report.dropped} 件\n"
+            f"除外 {score_report.dropped} 件（うち閾値 {score.MIN_SCORE:.2f} 未満 {score_report.below_min} 件）\n"
         )
 
     print("🤖 Claude APIでサマリ生成・HTML構築中...")
