@@ -242,17 +242,6 @@ def _md_link(title: str, url: str) -> str:
     return f"[{text}]({url})"
 
 
-def write_github_output(report: ScoreReport) -> None:
-    """Slack 通知に Jev の判定件数を載せるため、deploy ジョブへ渡す"""
-    path = os.environ.get("GITHUB_OUTPUT")
-    if not path:
-        return
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(f"jev_status={report.status}\n")
-        f.write(f"jev_scored={report.scored}\n")
-        f.write(f"jev_failed={report.failed}\n")
-
-
 def write_step_summary(report: ScoreReport) -> None:
     """Actions の画面に Jev の選別結果を出す（閾値やプロフィール調整用）"""
     path = os.environ.get("GITHUB_STEP_SUMMARY")
