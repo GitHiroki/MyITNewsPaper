@@ -28,10 +28,6 @@ jobs:
       ok_sources: ${{ steps.digest.outputs.ok_sources }}
       total_sources: ${{ steps.digest.outputs.total_sources }}
       failed_sources: ${{ steps.digest.outputs.failed_sources }}
-      # Jev の選別結果（disabled | ok | degraded）と判定件数
-      jev_status: ${{ steps.digest.outputs.jev_status }}
-      jev_scored: ${{ steps.digest.outputs.jev_scored }}
-      jev_failed: ${{ steps.digest.outputs.jev_failed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -82,9 +78,6 @@ jobs:
           FAILED_SOURCES: ${{ needs.build.outputs.failed_sources }}
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          JEV_STATUS: ${{ needs.build.outputs.jev_status }}
-          JEV_SCORED: ${{ needs.build.outputs.jev_scored }}
-          JEV_FAILED: ${{ needs.build.outputs.jev_failed }}
         run: |
           set -euo pipefail
           case "${STATUS:-}" in
@@ -110,12 +103,6 @@ jobs:
           run: ${RUN_URL}"
               ;;
           esac
-          # 【Jev お試し期間だけ】選別結果（Step Summary の表）を見に行けるよう、実行画面へのリンクを足す。
-          # お試し期間が終わったらこの if ブロックと上の JEV_* の env を消す（Issue で管理）
-          if [ -n "${JEV_STATUS:-}" ] && [ "$JEV_STATUS" != "disabled" ]; then
-            TEXT="${TEXT}
-          🧭 Jev 判定 ${JEV_SCORED} / 失敗 ${JEV_FAILED}（お試し中）: ${RUN_URL}"
-          fi
           jq -n --arg text "$TEXT" '{text: $text}' \
             | curl -s -X POST "$SLACK_WEBHOOK_URL" -H "Content-Type: application/json" -d @-
 
