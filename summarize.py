@@ -10,6 +10,7 @@ HTML の警告バナー / Slack 通知 / Step Summary で可視化できるよ�
 import html as html_lib
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
@@ -65,6 +66,34 @@ SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
 
 必ずJSON配列のみを返してください（前置き・コードブロック不要）:
 [{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
+
+# 英語ソースの記事は原文を開くと読むのがしんどいので、要約を厚くして
+# 「開かずに済む記事」を増やす（本文はブラウザ翻訳で読む前提。全文翻訳はしない）。
+ENGLISH_SOURCES = {"Hacker News", "dev.to", "The Hacker News", "OpenAI Blog", "Google Research Blog"}
+
+ENGLISH_SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
+英語の記事タイトルと概要を受け取り、日本語の読者が原文を開かなくても中身をつかめるよう、JSON形式で返してください。
+
+ルール:
+- 英語タイトルは title_ja に日本語意訳
+- summary は3〜4文の日本語で書く。次の順に含める
+  1. 何についての記事か（発表・事件・主張など）
+  2. 要点や新しさ（具体的な数値・製品名・手法があれば入れる）
+  3. 誰に関係するか・何をすればよいか（影響範囲や対応が分かる場合のみ）
+- 書いてよいのは入力のタイトルと概要から読み取れることだけ。推測で話を足さない
+- 概要がほとんど無い記事（リンクやポイント数だけなど）は、タイトルから分かる範囲で1〜2文に留める
+- 専門用語はそのまま使ってOK
+- 「〜です」「〜ます」調で統一
+- 重要度が低い記事は省いてよい
+- 各要素には必ず title_ja / url / summary の3キーをすべて含めること（省略・キー名の変更は不可）
+- url は入力で与えられた URL をそのまま使うこと
+
+必ずJSON配列のみを返してください（前置き・コードブロック不要）:
+[{"title_ja": "...", "url": "...", "summary": "..."}, ...]"""
+
+# モデルに渡す概要の上限文字数（HTML を除いたあと）
+SUMMARY_INPUT_CHARS = 200
+ENGLISH_SUMMARY_INPUT_CHARS = 800
 
 GITHUB_TRENDING_SYSTEM_PROMPT = """あなたは技術ニュースのキュレーターです。
 GitHub Trendingのリポジトリ情報を受け取り、JSON形式で返してください。
@@ -197,6 +226,11 @@ def _parse_response(raw: str) -> list[dict]:
     return items
 
 
+def _plain(text: str) -> str:
+    """RSS の summary に混ざる HTML タグ・実体参照を落として1行にする"""
+    return " ".join(html_lib.unescape(re.sub(r"<[^>]+>", " ", text)).split())
+
+
 def fallback_items(articles: list[dict[str, Any]], keep_summary: bool = False) -> list[dict]:
     """サマリなし（タイトルとURLのみ）のフォールバック"""
     return [
@@ -230,14 +264,21 @@ def summarize_source(source_name: str, articles: list[dict[str, Any]]) -> Source
         prompt = f"以下のGitHub Trendingリポジトリ情報を翻訳してJSON配列で返してください。\n\n{articles_text}"
         system, max_tokens, label = GITHUB_TRENDING_SYSTEM_PROMPT, 1000, "翻訳"
     else:
+        is_english = source_name in ENGLISH_SOURCES
+        limit = ENGLISH_SUMMARY_INPUT_CHARS if is_english else SUMMARY_INPUT_CHARS
         articles_text = ""
         for i, a in enumerate(articles, 1):
             articles_text += f"{i}. タイトル: {a['title']}\n"
-            if a["summary"]:
-                articles_text += f"   概要: {a['summary'][:200]}\n"
+            excerpt = _plain(a.get("summary") or "")[:limit]
+            if excerpt:
+                articles_text += f"   概要: {excerpt}\n"
             articles_text += f"   URL: {a['url']}\n\n"
         prompt = f"以下「{source_name}」の記事を要約してJSON配列で返してください。\n\n{articles_text}"
-        system, max_tokens, label = SYSTEM_PROMPT, 1500, "サマリ生成"
+        if is_english:
+            system, max_tokens = ENGLISH_SYSTEM_PROMPT, 3000
+        else:
+            system, max_tokens = SYSTEM_PROMPT, 1500
+        label = "サマリ生成"
 
     try:
         raw = _call_claude(system, prompt, max_tokens)
