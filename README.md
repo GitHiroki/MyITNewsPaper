@@ -60,6 +60,15 @@ Jev（TypeSafe AI）で「自分にとって読む価値」を0〜4でスコア�
 - 選別結果（スコアと採用記事）は Actions の Step Summary に出る
 - 環境変数で調整できる：`FETCH_PER_SOURCE`（候補数）、`KEEP_PER_SOURCE`（残す数）、`JEV_MIN_SCORE`（残す最低スコア、既定 `2.0`）、`JEV_MODEL`（例 `jev-1.13.0` でピン留め）
 
+### 英語ソースの要約の厚さ
+
+Hacker News・dev.to・The Hacker News・OpenAI Blog・Google Research Blog は、原文を開かずに済むよう
+summary を3〜4文（何の話か／要点／誰に関係するか）で書かせている。本文を読みたいときはブラウザ翻訳を使う前提で、全文翻訳はしない。
+
+- 対象ソースは `summarize.py` の `ENGLISH_SOURCES`、プロンプトは `ENGLISH_SYSTEM_PROMPT`
+- モデルに渡す概要の長さは `ENGLISH_SUMMARY_INPUT_CHARS`（英語）／`SUMMARY_INPUT_CHARS`（その他）
+- hnrss のように概要が無いフィードは、話を盛らないよう短い要約のままになる
+
 ### 通知時間を変える
 
 `.github/workflows/morning_digest.yml`のcronを変更

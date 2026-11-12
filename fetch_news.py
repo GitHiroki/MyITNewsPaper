@@ -39,7 +39,8 @@ def fetch_rss(name: str, url: str) -> list[dict[str, Any]]:
                 "source": name,
                 "title": entry.get("title", "タイトルなし"),
                 "url": entry.get("link", ""),
-                "summary": entry.get("summary", entry.get("description", ""))[:300],
+                # HTML 込みの生テキストなので長めに取る。要約に渡す長さは summarize.py 側で決める
+                "summary": entry.get("summary", entry.get("description", ""))[:2000],
                 "published": entry.get("published", ""),
             })
         return articles
